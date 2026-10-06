@@ -8,6 +8,8 @@ Info Retriever hilft, Informationen zu finden und direkt an Originalfundstellen 
 
 **Anfrage → sortierte Fundstellen → Auswahl → Original prüfen.** Die Quelle bleibt das maßgebliche Arbeitsobjekt (Original first, Retrieval first). Der Mensch vergleicht und bewertet die Treffer. Ein Ähnlichkeitswert bestätigt nicht den Geltungsbereich einer Aussage. Gerade bei ähnlich aufgebauten Regelabschnitten muss der Kontext erkennbar bleiben; eine echte Passage mit falscher Zuordnung wäre irreführend.
 
+KI ist bereits im MVP durch das Embedding-Modell zentral. Später kann sie die Auswahl und Aufbereitung von Informationen weiter unterstützen. Generierte Texte bleiben an den Originalquellen überprüfbar; die Entscheidung über ihre Verwendung bleibt beim Menschen.
+
 ## Mentales Modell des Frontends
 
 Die folgende ASCII-Skizze bewahrt das ursprüngliche Zielbild. Die vier Relevanzbalken je Treffer sind eine spätere Erweiterung; im MVP genügen Originaltext, Fundstellenangabe und ein Suchscore. „KI-Seitenleiste“ bezeichnet den Suchbereich und setzt kein Chat-Modell voraus.
@@ -59,6 +61,8 @@ Bei vorbereitetem Dokument gibt der Benutzer eine natürlichsprachliche Anfrage 
 
 Der Benutzer wählt einen Treffer. Der PDF-Viewer springt zur zugehörigen Stelle und hebt die Passage hervor. Der Benutzer kann ihren Geltungsbereich und Kontext prüfen, weiterblättern oder einen anderen Treffer auswählen.
 
+Im MVP entspricht die Markierung dem gefundenen Dokumentelement, etwa einem Absatz oder Satz. Die exakte Anzeige dieses Elements ist von einer späteren anfragebezogenen Auswahl nur seiner relevanten Teile zu unterscheiden.
+
 ## MVP-Abgrenzung und Erfolg
 
 Der MVP ist eine lokale Web-Anwendung mit einem aktiven textbasierten PDF. Er verbindet semantische Suche und präzise Originalanzeige. Kein Chat-Modell, keine Agentensteuerung, keine generierten Zusammenfassungen oder Synthese, keine intelligenten Rückfragen, keine einstellbare mehrdimensionale Gewichtung, keine OCR, Browser-Extension oder weiteren Ressourcentypen.
@@ -67,6 +71,7 @@ Automatisierte Tests prüfen technische Korrektheit. Den praktischen Nutzen beur
 
 ## Spätere Ideen – nicht Teil des MVP
 
+- **Präzisere Passagenauswahl:** Innerhalb eines Treffers nur die zur Anfrage passenden Sätze oder Textspannen auswählen. Ein erster Ansatz vergleicht die Satz-Embeddings mit der Anfrage; alternativ könnte ein Chat-Modell unterstützen. Wichtiger Kontext wie Einschränkungen oder Überschriften darf dabei nicht verloren gehen. Das Backend wählt Originaltextspannen aus und ordnet sie ihren PDF-Positionen zu; der Viewer markiert sie. Die Qualität der Auswahl wird gesondert geprüft.
 - **Mehrdimensionale Relevanz:** Kapitel, Unterkapitel, Absatz und Satz erhalten eigene Werte; Benutzergewichte bestimmen einen Gesamtscore, beispielsweise `wK·Kapitel + wU·Unterkapitel + wA·Absatz + wS·Satz`. Eine „Warum?“-Ansicht verbindet Score mit Evidenz und optional einer Erklärung.
 - **Intelligente Rückfragen:** Top-K-Treffer betrachten, nur offene Präferenzdimensionen berücksichtigen, deren vergleichbar skalierte Streuung untersuchen und bei voraussichtlich nützlicher Trennschärfe gezielt nachfragen. Diese Auswahl kann algorithmisch erfolgen. Ein Chat-Modell könnte Anforderungen, Widersprüche und Antworten interpretieren oder Fragen formulieren. Die Fachlogik gehört ins Backend; das Frontend zeigt den Dialog. Grundsatz: nur fragen, wenn es das Ergebnis verbessert.
 - **Zusammenfassung und Synthese:** Optional eine sehr kurze anfragebezogene Zusammenfassung je Treffer; später ausgewählte Originalstellen in ein eigenes Arbeitsdokument übernehmen. Aussagen müssen zum richtigen Geltungsbereich gehören und an den Quellen prüfbar bleiben.
