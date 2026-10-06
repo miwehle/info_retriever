@@ -1,0 +1,36 @@
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+.aws/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Frontend and build output
+node_modules/
+dist/
+build/
+coverage/
+
+# Local documents, model downloads and generated indexes
+/data/
+/models/
+/indexes/
+/uploads/
+.cache/
+
+# Local editor state
+.obsidian/
+.idea/
+.DS_Store
+Thumbs.db
