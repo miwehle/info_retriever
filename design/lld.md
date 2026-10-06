@@ -57,32 +57,24 @@ Die Fachmodule entsprechen internen Verarbeitungsschritten, nicht jeweils einer 
 
 Diese Grenze soll einen späteren Austausch von FastAPI auf die HTTP-Anbindung und deren Tests begrenzen; Service und Fachmodule bleiben bei unverändertem Schnittstellenvertrag unberührt. Ein alternatives Framework oder zusätzliche Abstraktionen dafür führen wir erst bei konkretem Bedarf ein.
 
-## Allgemeine KI-Operationen und fachliche Anpassung
+## KI-Fassade und Vektorsuche
 
-`ai.py` ist eine dünne Fassade mit allgemeinen, KI-toolnahen Operationen. Sie kennt Texte, Vektoren und neutrale IDs, aber keine PDFs, Kapitel, Fundstellen oder `SearchHit`-Objekte. Sie kapselt die konkret verwendeten Modelle und Suchbibliotheken, damit wir sie gezielt austauschen und mit ihnen experimentieren können. Die Fachmodule passen diese Operationen an Info Retriever an:
+`ai.py` kapselt allgemeine KI-Operationen; im Produktionscode stehen ausschließlich dort die Imports und Aufrufe der verwendeten KI-Tools. Die Funktionen delegieren meist mit wenigen Zeilen und vereinheitlichen bei Bedarf Präfixe, Zahlenformate und Normalisierung. Die Schnittstelle arbeitet mit Texten, Vektoren und neutralen IDs; Dokumentelemente, Kontextauswahl, Fundstellen und Trefferaufbereitung bleiben in den Fachmodulen.
 
-| Allgemeine Operation in `ai.py` | Fachliche Verantwortung |
-|---|---|
-| Texte beziehungsweise Suchanfragen einbetten | `embeddings.py`: Dokumentelemente, Hierarchie und Kontext für die Einbettung aufbereiten; `search.py`: Suchanfrage aufbereiten |
-| Vektorindex aufbauen | `index.py`: Vektoren und neutrale IDs den Dokumentelementen zuordnen |
-| Ähnliche Vektoren als IDs und Scores ermitteln | `search.py`: Treffer zusammenführen und mit Originaltext und Fundstellen verbinden |
+- **Embeddings:** `embed_documents(texts)` und `embed_query(text)`; zusätzlich Modellkennung, Vektordimension und Eingabelimit.
+- **Index und Suche:** Vektorindex erstellen und ähnliche Vektoren als IDs und Scores liefern. Vorgesehen ist FAISS `IndexFlatIP` mit normalisierten Vektoren für Cosine Similarity.
+- **Austauschbarkeit:** Zunächst eine konkrete Implementierung mit wiederverwendetem Modell und Index. Ein explizites Interface und die Auswahl alternativer Implementierungen folgen erst bei einer zweiten Variante. Bei gleichem Vertrag bleiben die Fachmodule unverändert; Tests können feste Vektoren liefern. Kein universelles KI-Framework oder Plugin-System.
 
-Allgemein bedeutet hier keine universelle KI-Plattform: Wir implementieren nur die benötigten MVP-Operationen, keine vorsorglichen Modi oder vollständigen Bibliotheks-Wrapper. Aufgaben werden nicht in beiden Schichten wiederholt; reine Weiterleitungen benötigen kein zusätzliches Design.
+Dokumentinhalte werden auf mehreren ermittelbaren Hierarchieebenen eingebettet, ohne lange Texte stillschweigend abzuschneiden. Query und Dokument verwenden kompatible Modell- und Verarbeitungseinstellungen. Ein Modellwechsel erfordert neue Embeddings und einen neuen Index. Startmodell, Behandlung langer Abschnitte und Zusammenführung verschiedener Trefferebenen sind noch offen.
 
-Zunächst ist `ai.py` eine konkrete Implementierung, die mehrere KI-Tools nutzt. Ihre Funktionen delegieren überwiegend mit wenigen Zeilen an diese Bibliotheken; notwendige Anpassungen wie Präfixe, Zahlenformate und Normalisierung bleiben dort. Ein bis drei Zeilen sind eine Orientierung, kein Limit. Modelle und Indizes werden wiederverwendet.
-
-**Abhängigkeitsregel:** Aufrufe der verwendeten allgemeinen KI-Tools dürfen ausschließlich in `ai.py` stehen. Dazu gehören Modellinitialisierung, Embedding-Berechnung und FAISS-Operationen sowie später gegebenenfalls Textgenerierung. Andere Produktionsmodule importieren und verwenden diese Tools nicht direkt, sondern greifen auf die öffentliche Schnittstelle von `ai.py` zu.
-
-Die Fachmodule verwenden nur die kleine öffentliche Schnittstelle von `ai.py`. Erst für eine zweite Variante definieren wir ein explizites Interface und einen einfachen Mechanismus zur Auswahl der Implementierung. So können KI-Experimente auf ein Implementierungsmodul und dessen Auswahl begrenzt bleiben. Eingaben, Ausgaben und ihre Bedeutung müssen dabei denselben Vertrag erfüllen, etwa bezüglich Normalisierung, IDs und Suchscores. Die Fachmodule bleiben unverändert, solange dieser Vertrag und die fachlich benötigten Fähigkeiten erhalten bleiben.
-
-Später kann `ai.py` einen allgemeinen Textgenerierungsaufruf anbieten. Fachliche Anweisungen, Kontextauswahl und Prüfung von Zusammenfassungen bleiben in den zuständigen Fachmodulen. Ebenso gehört die Auswahl relevanter Sätze oder Textspannen aus einem Treffer zur Fachlogik: Sie kann bestehende Embeddings vergleichen oder später ein Chat-Modell verwenden. Die Zuordnung zu Originalpositionen bleibt außerhalb von `ai.py`; die Markierung selbst übernimmt der Viewer. Dafür entstehen im MVP noch keine weiteren Operationen oder Module.
+Spätere KI-Funktionen stehen im [HLD](hld.md). Allgemeine Modellaufrufe gehören dann ebenfalls hierher; die anfragebezogene Passagenauswahl sowie Anweisungen und Prüfung von Zusammenfassungen gehören in die Fachmodule. Im MVP werden diese Erweiterungen nicht vorbereitet.
 
 ## Use Cases und interne Verarbeitung
 
 | Benutzer-Use-Case aus dem HLD | Service-Operation (vorgeschlagen) | Interner Ablauf |
 |---|---|---|
-| UC 1: PDF zum Durchsuchen öffnen | `prepare_document(pdf_path) → DocumentInfo` | `pdf.py`: Elemente/Fundstellen ermitteln → `embeddings.py`: Texte aufbereiten und über `ai.py` einbetten → `index.py`: Index über `ai.py` aufbauen und Elementzuordnung halten |
-| UC 2: Informationen im PDF suchen | `search(document_id, query, limit) → list[SearchHit]` | An `search.py` delegieren: Query-Embedding und Vektorsuche über `ai.py` → IDs den Elementen zuordnen → Treffer samt Originaltext und Fundstellen zusammenstellen |
+| UC 1: PDF zum Durchsuchen öffnen | `prepare_document(pdf_path) → DocumentInfo` | `pdf.py`: Elemente/Fundstellen ermitteln → `embeddings.py`: Texte aufbereiten und einbetten → `index.py`: Index mit Elementzuordnung aufbauen |
+| UC 2: Informationen im PDF suchen | `search(document_id, query, limit) → list[SearchHit]` | `search.py`: Query einbetten → Vektorsuche → Treffer samt Originaltext und Fundstellen zusammenstellen |
 | UC 3: Fundstelle im Original prüfen | `get_document(document_id) → Path` | Original-PDF bereitstellen; Navigation und Markierung anhand der bereits gelieferten Fundstellen übernimmt PDF.js im Frontend |
 
 Ein `InfoRetriever`-Objekt in `service.py` hält Modelladapter, Dokumentelemente und Index für ein aktives PDF. Es verbindet die Schritte; die Verarbeitungsdetails bleiben in den Fachmodulen. Das Modell wird über mehrere Anfragen wiederverwendet. Erst eine vollständig erfolgreiche Aufbereitung stellt das Dokument als durchsuchbar bereit; kein Suchaufruf darf einen halbfertigen Index sehen. Fehler wie unlesbare PDFs, fehlender zugänglicher Text oder unbekannte Dokumente werden verständlich gemeldet.
@@ -96,14 +88,6 @@ Ein `InfoRetriever`-Objekt in `service.py` hält Modelladapter, Dokumentelemente
 - **Suchtreffer:** Referenz auf das Dokumentelement, Suchscore und zugehörige Fundstellen.
 
 **Indexeintrag → Dokumentelement → Originalfundstelle** bleibt eindeutig. Zusätzlich eingebetteter Kontext wie Überschriften ersetzt nicht den Originaltext. Wiederkehrende Texte und Regelnummern dürfen keine Zuordnung allein über Textgleichheit auslösen. Nicht zuverlässig erkennbare Hierarchie bleibt als Unsicherheit sichtbar.
-
-## Embeddings und FAISS
-
-Der dünne Modelladapter in `ai.py` bietet `embed_documents(texts)` und `embed_query(text)` sowie Modellkennung, Vektordimension und Eingabelimit. Er übernimmt Modellaufruf, modellspezifische Präfixe und Vektornormalisierung. Die verwendete Implementierung wird den verarbeitenden Komponenten übergeben; Tests können feste Vektoren liefern. Ein explizites Interface, etwa als Python-`Protocol`, folgt erst beim Bedarf für eine zweite Variante. Ein Plugin-System ist nicht erforderlich.
-
-Dokumentinhalte werden auf mehreren ermittelbaren Hierarchieebenen eingebettet. Lange Abschnitte dürfen nicht stillschweigend abgeschnitten werden; ihre Behandlung ist noch zu entwerfen. Query und Dokument müssen mit kompatiblen Modell- und Verarbeitungseinstellungen eingebettet werden. Ein Modellwechsel erfordert neue Dokument-Embeddings und einen neuen Index.
-
-`ai.py` kapselt die FAISS-Aufrufe; `index.py` hält die fachliche Zuordnung der Indexeinträge zu Dokumentelementen. Als einfacher Start ist exakte Suche mit `IndexFlatIP` über normalisierte Vektoren vorgesehen; das Skalarprodukt entspricht dann der Cosine Similarity. Die Zusammenführung von Treffern verschiedener Ebenen bleibt offen. Eine einstellbare mehrdimensionale Gewichtung gehört nicht zum MVP.
 
 ## Tests und Experimente
 
