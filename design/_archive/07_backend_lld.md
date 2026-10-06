@@ -15,7 +15,7 @@ Browser: Oberfläche, PDF.js, fetch()
                  ↕ HTTP / JSON, PDF-Datei
 api.py: FastAPI
                  ↓ Python-Aufrufe
-service.py: InfoRetriever-Fassade
+service.py: übergreifende Koordination und Zustand
                  ↓
 PDF-Verarbeitung · Embeddings · FAISS · Suche
 ```
@@ -36,7 +36,7 @@ backend/
 │   └── info_retriever/
 │       ├── __init__.py
 │       ├── api.py           # HTTP-Endpunkte, Eingabeprüfung, Antworten
-│       ├── service.py       # InfoRetriever-Fassade und Ablaufsteuerung
+│       ├── service.py       # Use-Case-übergreifende Koordination und Zustand
 │       ├── models.py        # Dokumentelemente, Fundstellen, Suchtreffer
 │       ├── pdf.py           # UC 1: PDF laden und strukturieren
 │       ├── embeddings.py    # UC 2: Schnittstelle und Modelladapter
@@ -52,23 +52,27 @@ backend/
     └── integration/         # Zusammenspiel realer Komponenten, API-Tests
 ```
 
-Die Struktur ist eine Orientierung; Module und Tests entstehen erst, wenn sie im jeweiligen Schritt benötigt werden. Ein Modul pro Use Case ist keine Pflicht. Funktionen genügen, solange Klassen keinen konkreten Vorteil für Zustand oder Schnittstellen bieten. `pyproject.toml` bündelt Paketdefinition, Abhängigkeiten und Testkonfiguration.
+Die Zuordnung von UC 1–4 zu den Fachmodulen bleibt erhalten. Bei UC 5 „Ausgewähltes Ergebnis im PDF-Viewer anzeigen“ übernimmt das Frontend Navigation und Markierung; das Backend liefert PDF und Fundstellendaten. Module und Tests entstehen schrittweise. `pyproject.toml` bündelt Paketdefinition, Abhängigkeiten und Testkonfiguration.
 
 ## Zuständigkeiten und Schnittstellen
 
-### Fassade und HTTP-Anbindung
+### HTTP-Fassade und Service
 
-Die Fassade verbindet die Verarbeitungsschritte und verwaltet den vorbereiteten Dokumentzustand. Sie verbirgt diese Aufgaben hinter einer kleinen Python-API; sie ist keine zusätzliche Schicht aus bloßen Weiterleitungen. Vorgeschlagene Operationen:
+| Modul | Verantwortung |
+|---|---|
+| `api.py` | Kennt FastAPI, prüft HTTP-Eingaben, delegiert an den Service und übersetzt Ergebnisse und Fehler in HTTP-Antworten. Enthält keine fachliche Ablaufsteuerung oder Zustandsverwaltung. |
+| `service.py` | Koordiniert Use Cases und hält ihren gemeinsamen Zustand. Delegiert die einzelnen Verarbeitungsschritte an die Fachmodule. |
+| `pdf.py`, `embeddings.py`, `index.py`, `search.py` | Implementieren die Verarbeitung der zugeordneten Use Cases. |
 
-```text
-prepare_document(pdf_path) → DocumentInfo
-search(document_id, query, limit) → list[SearchHit]
-get_document(document_id) → Path
-```
+Service und Fachmodule kennen FastAPI nicht und sind direkt aus pytest oder einem Notebook aufrufbar. FastAPI-Typen bleiben in `api.py`.
 
-`prepare_document()` führt UC 1–3 aus: PDF analysieren, Embeddings berechnen, Index aufbauen. Diese Schritte bleiben intern einzeln prüfbar. `search()` liefert Originaltext, Score und Fundstellen für UC 4–5. `get_document()` erschließt das zugehörige Original-PDF. Die Namen und genauen Typen werden in den Use-Case-Entwürfen konkretisiert.
+Vorgesehene Methoden eines `InfoRetriever`-Objekts in `service.py`:
 
-Die HTTP-Schicht nimmt einen Datei-Upload beziehungsweise eine Suchanfrage entgegen, prüft die Eingaben und übersetzt Fassadenergebnisse und Fehler in HTTP-Antworten. Ein interner Dateipfad ist kein vom Browser frei wählbarer Zugriffspfad. PDF-Dateien werden über ihre Dokument-ID bereitgestellt. Für die Auswahl eines bereits gelieferten Treffers ist normalerweise kein erneuter Suchaufruf nötig; Navigation und Hervorhebung übernimmt das Frontend.
+- `prepare_document(pdf_path) → DocumentInfo`: UC 1–3 verbinden: PDF analysieren, Embeddings berechnen, Index aufbauen.
+- `search(document_id, query, limit) → list[SearchHit]`: Suche an `search.py` delegieren.
+- `get_document(document_id) → Path`: Zugehöriges Original-PDF erschließen.
+
+Konkrete HTTP-Endpunkte und Datentypen folgen in den Use-Case-Entwürfen. Der Browser übergibt eine PDF-Datei und verwendet anschließend deren Dokument-ID; interne Dateipfade sind nicht frei wählbar. Treffer enthalten bereits die Fundstellen für Navigation und Markierung im Viewer.
 
 ### Daten und Originalfundstellen
 
@@ -78,7 +82,7 @@ Die Zuordnung **Indexeintrag → Dokumentelement → Originalfundstelle** bleibt
 
 ### Embedding-Adapter und FAISS
 
-Die kleine Embedding-Schnittstelle bietet `embed_documents(texts)` und `embed_query(text)`. Ein Adapter übernimmt Modellaufruf, erforderliche Präfixe und einheitliche Vektornormalisierung. Er stellt außerdem Modellkennung, Vektordimension und Eingabelimit bereit. Die Abhängigkeit wird beim Erzeugen der Fassade übergeben; Tests können einen einfachen Adapter mit festen Vektoren einsetzen. Ein Python-`Protocol` ist dafür vorgesehen, kein Plugin-System.
+Die kleine Embedding-Schnittstelle bietet `embed_documents(texts)` und `embed_query(text)`. Ein Adapter übernimmt Modellaufruf, erforderliche Präfixe und einheitliche Vektornormalisierung. Er stellt außerdem Modellkennung, Vektordimension und Eingabelimit bereit. Der Adapter wird den verarbeitenden Funktionen beziehungsweise Objekten übergeben; Tests können einen einfachen Adapter mit festen Vektoren einsetzen. Ein Python-`Protocol` ist dafür vorgesehen, kein Plugin-System.
 
 `index.py` kapselt FAISS und die Zuordnung der Vektoren zu Dokumentelementen. `search.py` verbindet Query-Embedding, Indexsuche und Ergebnisaufbereitung. Als einfacher Start ist exakte Suche mit `IndexFlatIP` über normalisierte Vektoren vorgesehen; das Skalarprodukt entspricht dann der Cosine Similarity.
 
@@ -86,7 +90,7 @@ Dokument- und Query-Embeddings müssen zum selben Modell und denselben Verarbeit
 
 ## Zustand und Fehler
 
-Für den MVP ist zunächst ein lokaler Backend-Prozess mit einem aktiven PDF vorgesehen. Die Backend-Instanz hält Modell, Dokumentelemente und Index; das Modell wird über mehrere Anfragen hinweg wiederverwendet. Ein neues Dokument gilt erst nach vollständig erfolgreicher Aufbereitung als durchsuchbar. Suchaufrufe dürfen keinen halbfertigen Index sehen.
+Für den MVP ist ein lokaler Backend-Prozess mit einem aktiven PDF vorgesehen. Das `InfoRetriever`-Objekt in `service.py` verwaltet Modelladapter, Dokumentelemente und Index. Das Modell wird über mehrere Anfragen hinweg wiederverwendet. Ein Dokument wird erst nach vollständig erfolgreicher Aufbereitung als durchsuchbar bereitgestellt.
 
 Fehler wie ein unlesbares PDF, fehlender zugänglicher Text oder ein unbekanntes Dokument werden an der öffentlichen Schnittstelle verständlich gemeldet. Der Umgang mit parallelen Aufrufen, dem Wechsel des aktiven PDFs und längeren Aufbereitungszeiten wird vor der HTTP-Implementierung konkretisiert. Dauerhafte Speicherung und Wiederherstellung sind noch offen.
 
@@ -96,7 +100,8 @@ Es gelten [AGENTS.md](../AGENTS.md) und die dort eingeordneten [Testregeln](how_
 
 - Kleine PDFs prüfen Extraktion, Hierarchie und Fundstellenzuordnung, insbesondere bei ähnlich formulierten Abschnitten mit unterschiedlichen Überschriften.
 - Feste Vektoren prüfen Ranking und Zuordnung unabhängig vom Embedding-Modell. Integrationstests verwenden echtes FAISS und reale PDF-Verarbeitung.
-- Tests mit dem echten Embedding-Modell laufen gesondert; schnelle Tests benötigen keinen Modelldownload. Die spätere HTTP-Schicht wird mit FastAPIs `TestClient` geprüft.
+- Service-Tests prüfen übergreifende Abläufe und Zustandswechsel direkt in Python, insbesondere dass eine fehlgeschlagene Aufbereitung keinen halbfertigen Dokumentzustand veröffentlicht.
+- Tests mit dem echten Embedding-Modell laufen gesondert; schnelle Tests benötigen keinen Modelldownload. HTTP-Verhalten wird mit pytest und FastAPIs `TestClient` unter `tests/integration` geprüft, ohne separat gestarteten Webserver.
 - Die Suchqualität wird zusätzlich mit repräsentativen Fragen und erwarteten Fundstellen beurteilt. Die korrekte Markierung wird später mit PDF.js einschließlich Zoom und Seitengeometrie geprüft.
 
 Wir implementieren zuerst den Python-Kern mit pytest, anschließend die HTTP-Anbindung und später das Frontend. Die übergreifende Struktur wird durch kleine Entwürfe pro Use Case konkretisiert, nicht vorab als leeres Framework angelegt.
@@ -109,4 +114,3 @@ Wir implementieren zuerst den Python-Kern mit pytest, anschließend die HTTP-Anb
 - UC 4: Treffer verschiedener Ebenen zusammenführen und Überschneidungen behandeln; keine einstellbare mehrdimensionale Gewichtung im MVP.
 - HTTP / UC 5: Request- und Response-Daten, Fehlerfälle, Upload-Lebensdauer, laufende Verarbeitung und die Übergabe der Markierungsdaten an den Viewer festlegen.
 
-Die hier festgehaltenen späteren Entscheidungen ergänzen den bisherigen Entwurf: FAISS gehört zum MVP, die Embedding-Anbindung ist austauschbar, die Ausführung erfolgt lokal auf der CPU und FastAPI verbindet Browser und Backend. Ältere optionale Cloud- oder Agentenüberlegungen sind nicht Teil dieses Umsetzungsvorschlags.
