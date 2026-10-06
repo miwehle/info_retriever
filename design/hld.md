@@ -53,6 +53,8 @@ Die Seitenleiste enthält Anfrage und nach Relevanz sortierte Ergebnisliste (Ran
 
 Der Benutzer wählt ein textbasiertes PDF. Die Anwendung bereitet es auf; anschließend ist es angezeigt und durchsuchbar. Nicht lesbare oder nicht unterstützte Dateien werden verständlich gemeldet. Die internen Schritte muss der Benutzer nicht einzeln auslösen.
 
+Dokumentgliederung und Zuordnung der Fundstellen sollen am Original nachvollziehbar sein. Automatisch erkannte Strukturen können Fehler enthalten; unsichere Kapitelzuordnungen dürfen nicht als gesichert dargestellt werden.
+
 ### UC 2 – Informationen im PDF suchen
 
 Bei vorbereitetem Dokument gibt der Benutzer eine natürlichsprachliche Anfrage ein, typischerweise eine Frage. Er erhält eine nach Relevanz sortierte Liste mit Originaltext, Fundstellenangaben und Suchscore. Gesucht wird in Dokumentelementen auf mehreren Hierarchieebenen; wie Treffer verschiedener Ebenen zusammengeführt werden, ist im LLD noch zu klären.

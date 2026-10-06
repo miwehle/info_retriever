@@ -89,6 +89,14 @@ Ein `InfoRetriever`-Objekt in `service.py` hält Modelladapter, Dokumentelemente
 
 **Indexeintrag → Dokumentelement → Originalfundstelle** bleibt eindeutig. Zusätzlich eingebetteter Kontext wie Überschriften ersetzt nicht den Originaltext. Wiederkehrende Texte und Regelnummern dürfen keine Zuordnung allein über Textgleichheit auslösen. Nicht zuverlässig erkennbare Hierarchie bleibt als Unsicherheit sichtbar.
 
+### Dokumentstruktur: Befund und offene Lösungsidee
+
+**Negativbefund:** Die getestete Docling-Konfiguration liefert für die Sportordnung keinen brauchbaren Kapitelbaum: Überschriften-Level sind teilweise falsch, die Elternreferenz der Überschriften ist durchgehend `#/body`. `DoclingDocument` kann die gewünschte Hierarchie darstellen, wird damit aber noch nicht zuverlässig befüllt. Auch Marker liefert falsche Überschriften und Level; die erprobte GPT-Korrektur verbessert Level, löst aber nicht die Auswahl geeigneter Gliederungsüberschriften.
+
+**Experimentelle Lösungsidee:** Ein Chatmodell beurteilt Überschriftenkandidaten und liefert pro ID einen korrigierten Level oder „keine Gliederungsüberschrift“. Python übernimmt ausschließlich diese Strukturentscheidungen und baut passende Eltern-Kind-Beziehungen im `DoclingDocument` auf; Originaltext und Fundstellen bleiben unverändert. Die Beratung soll unabhängig von HTML oder Markdown sein.
+
+**Noch nicht beschlossen:** Zu prüfen sind Zuverlässigkeit, Implementierungsaufwand, Laufzeit der lokalen Aufbereitung und Modellkorrektur sowie API-Kosten; Einrichtung und erster Start werden getrennt betrachtet. Ein Chatmodell zur Aufbereitung wäre eine Änderung der bisherigen MVP-Abgrenzung. Detailbefunde stehen in den Beobachtungen zu [Docling](../experiments/docling/observations.md) und [Marker](../experiments/marker/observations.md).
+
 ## Tests und Experimente
 
 Es gelten [AGENTS.md](../AGENTS.md) und die dort eingeordneten [Testregeln](how_to_test.md). Unit-Tests orientieren sich an den Fachmodulen und prüfen beobachtbares Verhalten; keine Pflichttests für private Hilfsfunktionen oder triviale Weiterleitungen. Integrationstests liegen unter `tests/integration`.
