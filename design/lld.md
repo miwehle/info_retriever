@@ -99,7 +99,7 @@ Ein `InfoRetriever`-Objekt in `service.py` hält Modelladapter, Dokumentelemente
 
 ## Tests und Experimente
 
-Es gelten [AGENTS.md](../AGENTS.md) und die dort eingeordneten [Testregeln](how_to_test.md). Unit-Tests orientieren sich an den Fachmodulen und prüfen beobachtbares Verhalten; keine Pflichttests für private Hilfsfunktionen oder triviale Weiterleitungen. Integrationstests liegen unter `tests/integration`.
+Es gelten [AGENTS.md](../AGENTS.md) und die dort eingeordneten [gemeinsamen Testregeln](../../nmt_lab/translator/how_to_test.md). Unit-Tests orientieren sich an den Fachmodulen und prüfen beobachtbares Verhalten; keine Pflichttests für private Hilfsfunktionen oder triviale Weiterleitungen. Integrationstests liegen unter `tests/integration`.
 
 - Kleine PDFs prüfen Extraktion, Hierarchie und Fundstellen, insbesondere ähnlich formulierte Abschnitte mit unterschiedlichen Überschriften.
 - Feste Vektoren prüfen die allgemeinen KI-Operationen und das Ranking; Fachtests prüfen zusätzlich die Zuordnung zu Dokumentelementen und Originalfundstellen. Integrationstests verwenden echtes FAISS und reale PDF-Verarbeitung. Service-Tests prüfen Abläufe und Zustandswechsel bei Erfolg und Fehlern.

@@ -74,9 +74,9 @@ If umlauts or other non-ASCII text appear corrupted in tool output, assume an en
 
 ### Test Code
 
-For test code, follow `design/how_to_test.md`. Treat it as part of this AGENTS.md.
+For test code, follow `../nmt_lab/translator/how_to_test.md` (relative to this AGENTS.md). Treat it as part of this AGENTS.md. Do not modify the shared file as part of work on Info Retriever.
 
-The following clarifications take precedence where `design/how_to_test.md` is stricter:
+The following clarifications take precedence where the shared test rules are stricter:
 
 - Keep test modules and classes aligned with production code for navigation, but select test cases by meaningful observable behavior and risk, not by a mandatory test for every public function.
 - Core logic may remain private behind a stable public interface if its behavior can be adequately tested through that interface. Do not expose internals solely to test them.
