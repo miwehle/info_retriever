@@ -58,8 +58,8 @@ If the user chooses an option that appears significantly more complex or costly 
 Do not treat "go" as overriding this warning when the selected option conflicts with KISS/YAGNI or appears to create avoidable infrastructure duplication. First confirm that the user intentionally accepts the extra complexity.
 ### Explicit Simplification Tasks
 
-When the task is explicitly to simplify, set a LOC budget before implementation: production-code diff should be net negative unless the user explicitly accepts a tradeoff.
-If a proposed or emerging change makes production code grow, stop and ask before continuing.
+When the task is explicitly to simplify, aim to reduce code and mental load while preserving behavior. Use LOC as a supporting indicator, not a hard budget; readability and maintainability take priority over line count.
+Briefly explain any code growth needed for a clearer design. Ask before materially expanding the agreed scope or adding complexity whose value is unclear.
 Do not bundle simplification with new semantics, new data flows, or extra reporting fields unless the user explicitly agrees.
 
 ### Markdown
@@ -76,14 +76,11 @@ If umlauts or other non-ASCII text appear corrupted in tool output, assume an en
 
 For test code, follow `design/how_to_test.md`. Treat it as part of this AGENTS.md.
 
-Existing tests in `rl_lab` do not need to be retrofitted just to match those rules.
+The following clarifications take precedence where `design/how_to_test.md` is stricter:
 
-For HPO, distinguish two public API levels when applying the test rules:
-
-- `api-public`: objects intended for notebooks and external clients. They should be re-exported from `hpo/__init__.py`.
-- `module-public`: names without a leading `_` in a public module or public class. They may be used by higher-level package code without being re-exported from package `__init__.py` files.
-
-In HPO, direct tests should usually target only one of these two public API levels. Names with a leading `_`, and members of a private surrounding structure, are private implementation details and should usually be tested through their public users instead.
+- Keep test modules and classes aligned with production code for navigation, but select test cases by meaningful observable behavior and risk, not by a mandatory test for every public function.
+- Core logic may remain private behind a stable public interface if its behavior can be adequately tested through that interface. Do not expose internals solely to test them.
+- Separate correctness tests from retrieval-quality evaluation: pytest checks behavior such as correct source mapping and ranking calculations; a small set of representative questions and expected passages helps assess search usefulness. Passing correctness tests alone does not establish good retrieval quality.
 
 ### PlantUML
 
@@ -102,7 +99,7 @@ After refreshing links, mechanically check that local targets exist, line number
 
 ### Alignment
 
-Before changing workspace files, confirm alignment with the user on the direction and size of the change.
+Before changing workspace files, establish alignment with the user on the direction and size of the change. An explicit request or approval authorizes work within that agreed scope; do not ask again for routine implementation steps. Seek renewed alignment for material changes in direction, scope, or complexity.
 
 NCY means "no change yet": do not edit workspace files. Understand it as a chat
 shortcut for discussing and drafting the approach first; code changes may follow
