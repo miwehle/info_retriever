@@ -2,9 +2,11 @@
 
 ## Shared Base
 
-Before starting work, read [AGENTS_BASE.md](../../dev/agents-base/AGENTS_BASE.md). Its rules, including the referenced test rules, are binding for this repository. The following rules supplement that shared base.
+Before starting work, read [AGENTS_BASE.md](../../dev/agents-base/AGENTS_BASE.md). Its rules are binding for this repository. The following rules supplement that shared base.
 
 ## Test Code
+
+For test code, read [how_to_test.md](../../dev/agents-base/how_to_test.md). Its rules are binding for this repository.
 
 Do not modify the shared test rules as part of work on Info Retriever.
 
